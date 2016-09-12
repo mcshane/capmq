@@ -1,0 +1,8 @@
+*.o
+*.dSYM
+*.exe
+/version.h
+
+/capmq
+
+/TAGS
