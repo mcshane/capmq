@@ -34,6 +34,9 @@ version.h:
 print-version:
 	@echo $(PACKAGE_VERSION)
 
+check test: t_capmq
+	t_capmq
+
 .c.o:
 	$(CC) $(CFLAGS) $(INCLUDES) -c $<
 
@@ -42,6 +45,8 @@ clean:
 
 capmq: $(HTSLIB) version.h capmq.o
 	$(CC) -o $@ capmq.o $(CFLAGS) $(LDFLAGS) $(LIBS)
+
+t_capmq: t_capmq.o 
 
 force:
 
