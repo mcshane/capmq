@@ -10,7 +10,7 @@ INCLUDES=-I$(HTSDIR)/include -I$(HTSDIR)
 LIBS=-L$(HTSDIR)/lib -L$(HTSDIR) -lhts -Wl,--rpath,$(HTSDIR)/lib -Wl,--rpath,$(HTSDIR) -lpthread -lz -lm -ldl
 CFLAGS=-O3 -g -Wall -Werror
 
-PACKAGE_VERSION = 0.1
+PACKAGE_VERSION = 0.3
 
 # If building from a Git repository, replace $(PACKAGE_VERSION) with the Git
 # description of the working tree: either a release tag with the same value
@@ -34,7 +34,7 @@ version.h:
 print-version:
 	@echo $(PACKAGE_VERSION)
 
-check test: t_capmq
+check test: capmq t_capmq
 	./t_capmq
 
 .c.o:

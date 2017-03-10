@@ -1,0 +1,17 @@
+# Control file for continuous integration testing at http://travis-ci.org/
+
+language: c
+compiler:
+  - gcc
+
+os:
+  - linux
+
+addons:
+  apt:
+    packages:
+    - liblzma-dev
+    - libbz2-dev
+
+script:
+  - make -e && make test

@@ -203,7 +203,7 @@ static void usage(FILE *fp) {
     fprintf(fp, "Usage:   capmq [options] in-file out-file\n");
     fprintf(fp, "Options:\n");
     fprintf(fp, "  -C max              Cap MAPQ at max\n");
-    fprintf(fp, "  -s                  Store original MAPQ in om:i aux tag\n");
+    fprintf(fp, "  -S                  Do not store original MAPQ in om:i aux tag\n");
     fprintf(fp, "  -r                  Restore original MAPQ from om:i aux tag\n");
     fprintf(fp, "  -v                  verbose\n");
     fprintf(fp, "  -g RG:max           Cap MAPQ for read group IDs.\n");
@@ -242,11 +242,12 @@ static opts_t *parse_args(int argc, char **argv)
 
     opts->rgva = rgva_init(255);
     opts->argv_list = stringify_argv(argc, argv);
+    opts->storeQ = true;
 
     // a bit hacky, but I need to know if -f is in effect before parsing -g or -G or -C
     if (strstr(opts->argv_list,"-f")) opts->freemix = true;
 
-    while ((opt = getopt(argc, argv, "m:g:G:I:O:C:srhvf")) != -1) {
+    while ((opt = getopt(argc, argv, "m:g:G:I:O:C:sSrhvf")) != -1) {
     switch (opt) {
         case 'I': hts_parse_format(&in_fmt, optarg);
                   break;
@@ -258,6 +259,9 @@ static opts_t *parse_args(int argc, char **argv)
                   break;
 
         case 's': opts->storeQ = true;
+                  break;
+
+        case 'S': opts->storeQ = false;
                   break;
 
         case 'r': opts->restoreQ = true;
