@@ -7,7 +7,7 @@ CC=gcc
 HTSDIR=../htslib
 
 INCLUDES=-I$(HTSDIR)/include -I$(HTSDIR)
-LIBS=-L$(HTSDIR)/lib -L$(HTSDIR) -lhts -Wl,--rpath,$(HTSDIR)/lib -Wl,--rpath,$(HTSDIR) -lpthread -lz -lm -ldl 
+LIBS=-L$(HTSDIR)/lib -L$(HTSDIR) -lhts -Wl,--rpath,$(HTSDIR)/lib -Wl,--rpath,$(HTSDIR) -lpthread -lz -lm -ldl
 CFLAGS=-O3 -g -Wall -Werror
 
 PACKAGE_VERSION = 0.1
@@ -35,7 +35,7 @@ print-version:
 	@echo $(PACKAGE_VERSION)
 
 check test: t_capmq
-	t_capmq
+	./t_capmq
 
 .c.o:
 	$(CC) $(CFLAGS) $(INCLUDES) -c $<
@@ -46,7 +46,7 @@ clean:
 capmq: $(HTSLIB) version.h capmq.o
 	$(CC) -o $@ capmq.o $(CFLAGS) $(LDFLAGS) $(LIBS)
 
-t_capmq: t_capmq.o 
+t_capmq: t_capmq.o
 
 force:
 

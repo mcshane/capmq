@@ -84,11 +84,11 @@ int main(int argc, char *argv[])
     // cap all values, and create om tags
     if (run_test("./capmq -C40 -s test1.sam","4 1 om[45,46,47,48] q[40,40,40,40]")) fail++; else pass++;
 
-    // cap and restore. End result should be unchanged 
-    if (run_test("./capmq -C40 -s test1.sam | capmq -r","4 2 om[-1,-1,-1,-1] q[45,46,47,48]")) fail++; else pass++;
+    // cap and restore. End result should be unchanged
+    if (run_test("./capmq -C40 -s test1.sam | ./capmq -r","4 2 om[-1,-1,-1,-1] q[45,46,47,48]")) fail++; else pass++;
 
-    // cap and cap and restore. End result should still be unchanged 
-    if (run_test("./capmq -C41 -s test1.sam | capmq -C 5 -s | capmq -r","4 3 om[-1,-1,-1,-1] q[45,46,47,48]")) fail++; else pass++;
+    // cap and cap and restore. End result should still be unchanged
+    if (run_test("./capmq -C41 -s test1.sam | ./capmq -C 5 -s | ./capmq -r","4 3 om[-1,-1,-1,-1] q[45,46,47,48]")) fail++; else pass++;
 
     // read groups, no default cap
     if (run_test("./capmq -gb:41 -ga:40 -gx:42 -s test1.sam","4 1 om[45,46,47,48] q[40,40,41,41]")) fail++; else pass++;

@@ -1,8 +1,9 @@
 /* The MIT License
 
-    Copyright (C) 2017 Genome Research Ltd.
+    Copyright (C) 2016-2017 Genome Research Ltd.
 
     Author: Shane McCarthy <sm15@sanger.ac.uk>
+            Jennifer Liddle <js10@sanger.ac.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -47,7 +48,7 @@ typedef struct {
 } rgva_t;
 
 // initialise the rgv array
-static rgva_t *rgva_init(int max) 
+static rgva_t *rgva_init(int max)
 {
     rgva_t *rgva = calloc(1, sizeof(rgva_t));
     rgva->end = 0;
@@ -201,19 +202,20 @@ static void usage(FILE *fp) {
     fprintf(fp, "About:   cap mapping quality (MAPQ) to the specified value\n");
     fprintf(fp, "Usage:   capmq [options] in-file out-file\n");
     fprintf(fp, "Options:\n");
-    fprintf(fp, "  -C max              Cap mapping quality scores at max\n");
+    fprintf(fp, "  -C max              Cap MAPQ at max\n");
     fprintf(fp, "  -s                  Store original MAPQ in om:i aux tag\n");
     fprintf(fp, "  -r                  Restore original MAPQ from om:i aux tag\n");
     fprintf(fp, "  -v                  verbose\n");
-    fprintf(fp, "  -g RG:max           Cap mapping quality scores for read group IDs.\n");
+    fprintf(fp, "  -g RG:max           Cap MAPQ for read group IDs.\n");
     fprintf(fp, "                      This can be specified more than once, and if specified\n");
     fprintf(fp, "                      will overide the -C paramater for those read groups.\n");
-    fprintf(fp, "  -G filename         As -g, but group ID/max value pairs are read from a\n");
-    fprintf(fp, "                      tab delimited file.\n");
-    fprintf(fp, "  -f                  the values to -C, -g or in the file specified with -G\n");
-    fprintf(fp, "                      are NOT maximum quality scores, but a freemix value\n");
-    fprintf(fp, "                      from which the quality score is calculated.\n");
-    fprintf(fp, "  -m min              Minimum quality score. Do not set the calculated quality\n");
+    fprintf(fp, "  -G filename         As for -g, but group ID/max value pairs are read from\n");
+    fprintf(fp, "                      a tab delimited file.\n");
+    fprintf(fp, "  -f                  The values to -C, -g or in the file specified with -G\n");
+    fprintf(fp, "                      are NOT maximum MAPQ scores, but estimated fraction of\n");
+    fprintf(fp, "                      contamination (e) from which to calculate the maximum\n");
+    fprintf(fp, "                      MAPQ as int(10*log10(1/e)).\n");
+    fprintf(fp, "  -m min              Minimum MAPQ. Do not set the calculated quality\n");
     fprintf(fp, "                      to less than this value. Only used with -f\n");
     fprintf(fp, "  -I fmt(,opt...)     Input format and format-options [auto].\n");
     fprintf(fp, "  -O fmt(,opt...)     Output format and format-options [SAM].\n");
@@ -282,12 +284,12 @@ static opts_t *parse_args(int argc, char **argv)
             return NULL;
         }
     }
-    
+
     if (!opts->capQ && !opts->restoreQ && !opts->rgva->end) {
         usage(stderr);
         return NULL;
     }
-    
+
     char *fnin = optind < argc ? argv[optind++] : "-";
     if (!(opts->in = sam_open_format(fnin, "r", &in_fmt))) {
         perror(argv[optind]);
