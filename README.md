@@ -8,4 +8,5 @@ Uses [htslib](https://github.com/samtools/htslib) for SAM/BAM/CRAM reading and w
 git clone git://github.com/mcshane/capmq.git
 cd capmq
 make HTSDIR=/path/to/your/htslib/install/or/build/dir
+make test
 ```

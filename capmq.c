@@ -26,6 +26,8 @@ DEALINGS IN THE SOFTWARE.  */
 #include <stdlib.h>
 #include <stdbool.h>
 #include <getopt.h>
+#include <math.h>
+#include <errno.h>
 
 #include <htslib/sam.h>
 #include <cram/sam_header.h>
@@ -99,11 +101,11 @@ typedef struct {
     bool storeQ;
     bool restoreQ;
     bool freemix;
+    int minQ;
     samFile *in;
     samFile *out;
     char *argv_list;
     rgva_t *rgva;
-    char *gfname;
 } opts_t;
 
 static void free_opts(opts_t *opts)
@@ -112,7 +114,6 @@ static void free_opts(opts_t *opts)
     if (!opts) return;
     if (opts->in) sam_close(opts->in);
     if (opts->out) sam_close(opts->out);
-    free(opts->gfname);
     free(opts->argv_list);
     if (opts->rgva) {
         for (n=0; n < opts->rgva->end; n++) {
@@ -123,6 +124,12 @@ static void free_opts(opts_t *opts)
     }
 }
 
+// Convert freemix value to quality value
+static inline int f2q(double f)
+{
+    if (!f) return 0;
+    return (int) (10 * log10(1.0/f));
+}
 
 /*
  * Parse an RG:val pair
@@ -131,7 +138,7 @@ static void free_opts(opts_t *opts)
  * where RG  is the Read Group
  *       val is the capQ value (or freemix value)
  */
-static void parse_rgv(rgva_t *rgva, char *arg)
+static void parse_rgv(rgva_t *rgva, char *arg, bool freemix)
 {
     char *argstr = strdup(arg);
     char *s = strrchr(argstr,':');
@@ -139,12 +146,38 @@ static void parse_rgv(rgva_t *rgva, char *arg)
         rgv_t *rgv = calloc(1, sizeof(rgv_t));
         *s=0;
         rgv->rg = strdup(argstr);
-        rgv->capQ = atoi(s+1);
+        if (freemix) rgv->capQ = f2q(atof(s+1));
+        else         rgv->capQ = atoi(s+1);
         rgva_push(rgva,rgv);
     }
     free(argstr);
 }
 
+/*
+ * Parse RG, val pairs from a tab delimited file
+ */
+static void parse_gfile(char *fname, opts_t *opts)
+{
+    char *buf = NULL;
+    size_t n;
+    FILE *fh = fopen(fname,"r");
+    if (!fh) {
+        fprintf(stderr,"ERROR: Can't open file %s: %s\n", fname, strerror(errno));
+        exit(1);
+    }
+
+    while (getline(&buf, &n, fh) > 0) {
+        if (buf[strlen(buf)-1] == '\n') buf[strlen(buf)-1]=0;   // remove trailing lf
+        if (*buf && *buf!='#') {    // ignore blank lines and comments
+            char *s = strchr(buf,'\t');
+            if (s) {
+                *s=':'; parse_rgv(opts->rgva, buf, opts->freemix);
+            }
+        }
+        free(buf); buf=NULL;
+    }
+    fclose(fh);
+}
 
 /*
  * convert SAM_hdr to bam_hdr
@@ -158,6 +191,9 @@ static void sam_hdr_unparse2(SAM_hdr *sh, bam_hdr_t *h)
     sam_hdr_free(sh);
 }
 
+/*
+ * Display usage information
+ */
 static void usage(FILE *fp) {
     fprintf(fp, "\n");
     fprintf(fp, "Program: capmq\n");
@@ -173,7 +209,7 @@ static void usage(FILE *fp) {
     fprintf(fp, "                      This can be specified more than once, and if specified\n");
     fprintf(fp, "                      will overide the -C paramater for those read groups.\n");
     fprintf(fp, "  -G filename         As -g, but group ID/max value pairs are read from a\n");
-    fprintf(fp, "                      tab or comma delimited file.\n");
+    fprintf(fp, "                      tab delimited file.\n");
     fprintf(fp, "  -f                  the values to -C, -g or in the file specified with -G\n");
     fprintf(fp, "                      are NOT maximum quality scores, but a freemix value\n");
     fprintf(fp, "                      from which the quality score is calculated.\n");
@@ -190,6 +226,9 @@ template names enabled and a larger number of sequences per slice, try:\n\
 \n");
 }
 
+/*
+ * Parse and validate command line arguments
+ */
 static opts_t *parse_args(int argc, char **argv)
 {
     htsFormat in_fmt = {0};
@@ -202,7 +241,10 @@ static opts_t *parse_args(int argc, char **argv)
     opts->rgva = rgva_init(255);
     opts->argv_list = stringify_argv(argc, argv);
 
-    while ((opt = getopt(argc, argv, "g:G:I:O:C:srhv")) != -1) {
+    // a bit hacky, but I need to know if -f is in effect before parsing -g or -G or -C
+    if (strstr(opts->argv_list,"-f")) opts->freemix = true;
+
+    while ((opt = getopt(argc, argv, "m:g:G:I:O:C:srhvf")) != -1) {
     switch (opt) {
         case 'I': hts_parse_format(&in_fmt, optarg);
                   break;
@@ -210,7 +252,7 @@ static opts_t *parse_args(int argc, char **argv)
         case 'O': hts_parse_format(&out_fmt, optarg);
                   break;
 
-        case 'C': opts->capQ = atoi(optarg);
+        case 'C': opts->capQ = opts->freemix ? f2q(atof(optarg)) : atoi(optarg);
                   break;
 
         case 's': opts->storeQ = true;
@@ -222,7 +264,13 @@ static opts_t *parse_args(int argc, char **argv)
         case 'f': opts->freemix = true;
                   break;
 
-        case 'g': parse_rgv(opts->rgva, optarg);
+        case 'g': parse_rgv(opts->rgva, optarg, opts->freemix);
+                  break;
+
+        case 'G': parse_gfile(optarg,opts);
+                  break;
+
+        case 'm': opts->minQ = atoi(optarg);
                   break;
 
         case 'h': usage(stdout);
@@ -235,7 +283,7 @@ static opts_t *parse_args(int argc, char **argv)
         }
     }
     
-    if (!opts->capQ && !opts->restoreQ && !opts->rgva->end && !opts->gfname) {
+    if (!opts->capQ && !opts->restoreQ && !opts->rgva->end) {
         usage(stderr);
         return NULL;
     }
@@ -256,16 +304,6 @@ static opts_t *parse_args(int argc, char **argv)
     }
 
     rgva_sort(opts->rgva);
-
-#if 0
-    int n;
-    for (n=0; n < opts->rgva->end; n++) {
-        rgv_t *rgv = opts->rgva->rgv[n];
-        printf("%s\t%d\n", rgv->rg, rgv->capQ);
-    }
-    rgv_t *x = rgva_find(opts->rgva,"a");
-    printf("Found x=%d\n", x?x->capQ:-1);
-#endif
 
     return opts;
 }
@@ -324,16 +362,22 @@ int capq(opts_t *opts)
                 int capQ = opts->capQ;
                 rg = bam_aux_get(b, "RG");
                 if (rg) {
+                    // handle -g / -G options
                     char *rgtag = bam_aux2Z(rg);
                     rgv = rgva_find(opts->rgva, rgtag);
                     if (rgv) capQ = rgv->capQ;
                 }
                 if (b->core.qual > capQ) {
                     if (opts->storeQ && !om) {
+                        // handle -s option
                         int q = b->core.qual;
                         bam_aux_append(b, "om", 'i', 4, (uint8_t*)&q);
                     }
                     b->core.qual = capQ;
+                }
+                if (opts->freemix) {
+                    // handle -m option (only valid with -f)
+                    if (b->core.qual < opts->minQ) b->core.qual = opts->minQ;
                 }
             }
         }
@@ -353,6 +397,9 @@ int capq(opts_t *opts)
     return 0;
 }
 
+/*
+ * parse arguments and do things with them
+ */
 int main(int argc, char *argv[])
 {
     int ret = 1;

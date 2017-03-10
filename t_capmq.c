@@ -93,6 +93,21 @@ int main(int argc, char *argv[])
     // read groups, no default cap
     if (run_test("./capmq -gb:41 -ga:40 -gx:42 -s test1.sam","4 1 om[45,46,47,48] q[40,40,41,41]")) fail++; else pass++;
 
+    // read groups, with default cap
+    if (run_test("./capmq -C40 -ga:41 -s test1.sam","4 1 om[45,46,47,48] q[41,41,40,40]")) fail++; else pass++;
+
+    // cap value using freemix
+    if (run_test("./capmq -C0.00005 -f test1.sam","4 1 om[-1,-1,-1,-1] q[43,43,43,43]")) fail++; else pass++;
+
+    // read groups using freemix
+    if (run_test("./capmq -gb:0.00005 -f -ga:0.0001 test1.sam","4 1 om[-1,-1,-1,-1] q[40,40,43,43]")) fail++; else pass++;
+
+    // read groups using freemix and -m
+    if (run_test("./capmq -m41 -gb:0.00005 -f -ga:0.0001 test1.sam","4 1 om[-1,-1,-1,-1] q[41,41,43,43]")) fail++; else pass++;
+
+    // read groups from file
+    if (run_test("./capmq -m41 -f -G test1.txt test1.sam","4 1 om[-1,-1,-1,-1] q[41,41,43,43]")) fail++; else pass++;
+
     printf("Passed %d tests\n", pass);
     if (fail) printf("FAILED %d tests\n", fail);
 
