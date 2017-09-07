@@ -311,6 +311,36 @@ static opts_t *parse_args(int argc, char **argv)
 
     rgva_sort(opts->rgva);
 
+    if (opts->freemix) {
+      if (opts->capQ < opts->minQ) {
+          if (opts->verbose) {
+              fprintf(stderr, 
+                      "Default mapping quality cap calculated from freemix (%d) "
+                      "was lower than the minimum specifed by `-m' (%d), using "
+                      "the latter as the default mapping quality cap.\n", 
+                      opts->capQ, opts->minQ);
+          }
+          opts->capQ = opts->minQ;
+      }
+      if (opts->rgva) {
+          int n;
+          for (n=0; n < opts->rgva->end; n++) {
+              rgv_t *rgv = opts->rgva->rgv[n];
+              if (rgv->capQ < opts->minQ) {
+                  if (opts->verbose) {
+                      fprintf(stderr, 
+                              "Mapping quality cap calculated from freemix (%d) "
+                              "for read group `%s' was lower than the minimum "
+                              "specifed by `-m' (%d), using the latter as the "
+                              "mapping quality cap for this read group.",
+                              rgv->capQ, rgv->rg, opts->minQ);
+                  }
+                  rgv->capQ = opts->minQ;
+              }
+          }
+      }
+    }
+
     return opts;
 }
 
@@ -380,10 +410,6 @@ int capq(opts_t *opts)
                         bam_aux_append(b, "om", 'i', 4, (uint8_t*)&q);
                     }
                     b->core.qual = capQ;
-                }
-                if (opts->freemix) {
-                    // handle -m option (only valid with -f)
-                    if (b->core.qual < opts->minQ) b->core.qual = opts->minQ;
                 }
             }
         }
