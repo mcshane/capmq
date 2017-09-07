@@ -36,8 +36,8 @@ int run_test(char *cmd, char *expected)
     size_t n;
     int nlines=0;
     int nPG=0;
-    int om[4]={0,0,0,0};
-    int q[4];
+    int om[6]={0,0,0,0,0,0};
+    int q[6];
 
     if (verbose) fprintf(stderr, "Testing command: %s\n", cmd);
 
@@ -51,7 +51,7 @@ int run_test(char *cmd, char *expected)
         if (strncmp(lineptr,"@PG",3) == 0) nPG++;;
         if (*lineptr != '@') {  // read line, not header line
             char *s;
-            if (nlines < 4) {
+            if (nlines < 6) {
                 s = strstr(lineptr, "\t4");     // look for quality score
                 q[nlines] = s ? atoi(s+1) : -1;
                 s = strstr(lineptr, "om:i:");
@@ -63,8 +63,8 @@ int run_test(char *cmd, char *expected)
     free(lineptr);
 
     pclose(f);
-    sprintf(res_str,"%d %d om[%d,%d,%d,%d] q[%d,%d,%d,%d]",
-                     nlines, nPG, om[0], om[1], om[2], om[3], q[0], q[1], q[2], q[3]);
+    sprintf(res_str,"%d %d om[%d,%d,%d,%d,%d,%d] q[%d,%d,%d,%d,%d,%d]",
+                    nlines, nPG, om[0], om[1], om[2], om[3], om[4], om[5], q[0], q[1], q[2], q[3], q[4], q[5]);
 
     if (strcmp(res_str,expected)) {
         fprintf(stderr,"Expected: %s\n",expected);
@@ -79,34 +79,34 @@ int main(int argc, char *argv[])
     int pass=0, fail=0;
 
     // this should do nothing except add @PG, because no MQ is over 100
-    if (run_test("./capmq -C100 test1.sam","4 1 om[-1,-1,-1,-1] q[45,46,47,48]")) fail++; else pass++;
+    if (run_test("./capmq -C100 test1.sam","6 1 om[-1,-1,-1,-1,-1,-1] q[45,46,47,48,4,4]")) fail++; else pass++;
 
     // cap all values, and create om tags
-    if (run_test("./capmq -C40 test1.sam","4 1 om[45,46,47,48] q[40,40,40,40]")) fail++; else pass++;
+    if (run_test("./capmq -C40 test1.sam","6 1 om[45,46,47,48,-1,-1] q[40,40,40,40,4,4]")) fail++; else pass++;
 
     // cap and restore. End result should be unchanged
-    if (run_test("./capmq -C40 test1.sam | ./capmq -r","4 2 om[-1,-1,-1,-1] q[45,46,47,48]")) fail++; else pass++;
+    if (run_test("./capmq -C40 test1.sam | ./capmq -r","6 2 om[-1,-1,-1,-1,-1,-1] q[45,46,47,48,4,4]")) fail++; else pass++;
 
     // cap and cap and restore. End result should still be unchanged
-    if (run_test("./capmq -C41 test1.sam | ./capmq -C 5 | ./capmq -r","4 3 om[-1,-1,-1,-1] q[45,46,47,48]")) fail++; else pass++;
+    if (run_test("./capmq -C41 test1.sam | ./capmq -C 5 | ./capmq -r","6 3 om[-1,-1,-1,-1,-1,-1] q[45,46,47,48,4,4]")) fail++; else pass++;
 
     // read groups, no default cap
-    if (run_test("./capmq -gb:41 -ga:40 -gx:42 test1.sam","4 1 om[45,46,47,48] q[40,40,41,41]")) fail++; else pass++;
+    if (run_test("./capmq -gb:41 -ga:40 -gx:42 test1.sam","6 1 om[45,46,47,48,-1,-1] q[40,40,41,41,4,4]")) fail++; else pass++;
 
     // read groups, with default cap
-    if (run_test("./capmq -C40 -ga:41 test1.sam","4 1 om[45,46,47,48] q[41,41,40,40]")) fail++; else pass++;
+    if (run_test("./capmq -C40 -ga:41 test1.sam","6 1 om[45,46,47,48,-1,-1] q[41,41,40,40,4,4]")) fail++; else pass++;
 
     // cap value using freemix
-    if (run_test("./capmq -S -C0.00005 -f test1.sam","4 1 om[-1,-1,-1,-1] q[43,43,43,43]")) fail++; else pass++;
+    if (run_test("./capmq -S -C0.00005 -f test1.sam","6 1 om[-1,-1,-1,-1,-1,-1] q[43,43,43,43,4,4]")) fail++; else pass++;
 
     // read groups using freemix
-    if (run_test("./capmq -S -gb:0.00005 -f -ga:0.0001 test1.sam","4 1 om[-1,-1,-1,-1] q[40,40,43,43]")) fail++; else pass++;
+    if (run_test("./capmq -S -gb:0.00005 -f -ga:0.0001 test1.sam","6 1 om[-1,-1,-1,-1,-1,-1] q[40,40,43,43,4,4]")) fail++; else pass++;
 
     // read groups using freemix and -m
-    if (run_test("./capmq -m41 -S -gb:0.00005 -f -ga:0.0001 test1.sam","4 1 om[-1,-1,-1,-1] q[41,41,43,43]")) fail++; else pass++;
+    if (run_test("./capmq -m41 -S -gb:0.00005 -f -ga:0.0001 test1.sam","6 1 om[-1,-1,-1,-1,-1,-1] q[41,41,43,43,4,4]")) fail++; else pass++;
 
     // read groups from file
-    if (run_test("./capmq -m41 -S -f -G test1.txt test1.sam","4 1 om[-1,-1,-1,-1] q[41,41,43,43]")) fail++; else pass++;
+    if (run_test("./capmq -m41 -S -f -G test1.txt test1.sam","6 1 om[-1,-1,-1,-1,-1,-1] q[41,41,43,43,4,4]")) fail++; else pass++;
 
     printf("Passed %d tests\n", pass);
     if (fail) printf("FAILED %d tests\n", fail);
