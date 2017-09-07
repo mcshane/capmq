@@ -270,6 +270,9 @@ static opts_t *parse_args(int argc, char **argv)
         case 'f': opts->freemix = true;
                   break;
 
+        case 'v': opts->verbose = true;
+                  break;
+
         case 'g': parse_rgv(opts->rgva, optarg, opts->freemix);
                   break;
 
@@ -325,6 +328,20 @@ int capq(opts_t *opts)
     uint8_t *om = NULL;
     uint8_t *rg = NULL;
     rgv_t *rgv = NULL;
+    int n;
+
+    if (opts->verbose) {
+        fprintf(stderr, "Capping mapping qualities of %s to a maximum of %d by default\n", opts->in->fn, opts->capQ);
+        if (opts->rgva) {
+            for (n=0; n < opts->rgva->end; n++) {
+                rgv_t *rgv = opts->rgva->rgv[n];
+                fprintf(stderr, "Capping mapping qualities to a maximum of %d for read group %s\n", rgv->capQ, rgv->rg); 
+            }
+        }
+        if (opts->freemix) {
+          fprintf(stderr, "However, mapping qualities won't be lowered below %d\n", opts->minQ);
+        }
+    }
 
     // read header
     if (!(header = sam_hdr_read(opts->in))) {
