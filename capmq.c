@@ -268,7 +268,7 @@ static void usage(FILE *fp) {
     fprintf(fp, "About:   cap mapping quality (MAPQ) to the specified value\n");
     fprintf(fp, "Usage:   capmq [options] in-file out-file\n");
     fprintf(fp, "Options:\n");
-    fprintf(fp, "  -C max              Cap MAPQ at max\n");
+    fprintf(fp, "  -C max              Cap MAPQ at max (default: 255)\n");
     fprintf(fp, "  -S                  Do not store original MAPQ in om:i aux tag\n");
     fprintf(fp, "  -r                  Restore original MAPQ from om:i aux tag\n");
     fprintf(fp, "  -v                  verbose\n");
@@ -283,6 +283,7 @@ static void usage(FILE *fp) {
     fprintf(fp, "                      MAPQ as int(10*log10(1/e)).\n");
     fprintf(fp, "  -m min              Minimum MAPQ. Do not set the calculated quality\n");
     fprintf(fp, "                      to less than this value. Only used with -f\n");
+    fprintf(fp, "                      (default: 0)\n");
     fprintf(fp, "  -I fmt(,opt...)     Input format and format-options [auto].\n");
     fprintf(fp, "  -O fmt(,opt...)     Output format and format-options [SAM].\n");
     fprintf(fp, "\n");
@@ -309,6 +310,8 @@ static opts_t *parse_args(int argc, char **argv)
     opts->rgva = rgva_init(255);
     opts->argv_list = stringify_argv(argc, argv);
     opts->storeQ = true;
+    opts->minQ = 0;
+    opts->capQ = 255;
 
     // a bit hacky, but I need to know if -f is in effect before parsing -g or -G or -C
     if (strstr(opts->argv_list,"-f")) opts->freemix = true;
@@ -358,8 +361,8 @@ static opts_t *parse_args(int argc, char **argv)
         }
     }
 
-    if (!opts->capQ && !opts->restoreQ && !opts->rgva->end) {
-        usage(stderr);
+    if (opts->capQ == 255 && !opts->restoreQ && !opts->rgva->end) {
+        fprintf(stderr, "Nothing to do!\n");
         return NULL;
     }
 
@@ -401,7 +404,7 @@ static opts_t *parse_args(int argc, char **argv)
                               "Mapping quality cap calculated from freemix (%d) "
                               "for read group `%s' was lower than the minimum "
                               "specifed by `-m' (%d), using the latter as the "
-                              "mapping quality cap for this read group.",
+                              "mapping quality cap for this read group.\n",
                               rgv->capQ, rgv->rg, opts->minQ);
                   }
                   rgv->capQ = opts->minQ;
@@ -433,9 +436,6 @@ int capq(opts_t *opts)
                 rgv_t *rgv = opts->rgva->rgv[n];
                 fprintf(stderr, "Capping mapping qualities to a maximum of %d for read group %s\n", rgv->capQ, rgv->rg); 
             }
-        }
-        if (opts->freemix) {
-          fprintf(stderr, "However, mapping qualities won't be lowered below %d\n", opts->minQ);
         }
     }
 
