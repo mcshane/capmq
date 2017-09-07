@@ -5,9 +5,12 @@ all: $(PROGS)
 CC=gcc
 
 HTSDIR=../htslib
+HTSSRC=$(HTSDIR)
 
-INCLUDES=-I$(HTSDIR)/include -I$(HTSDIR)
-LIBS=-L$(HTSDIR)/lib -L$(HTSDIR) -lhts -Wl,--rpath,$(HTSDIR)/lib -Wl,--rpath,$(HTSDIR) -lpthread -lz -lm -ldl
+ZLIB_LIBS=-lz
+ZLIB_INCLUDES=
+INCLUDES=-I$(HTSDIR)/include -I$(HTSSRC) $(ZLIB_INCLUDES)
+LIBS=-L$(HTSDIR)/lib -L$(HTSDIR) -lhts -Wl,--rpath,$(HTSDIR)/lib -Wl,--rpath,$(HTSDIR) -lpthread $(ZLIB_LIBS) -lm -ldl
 CFLAGS=-O3 -g -Wall -Werror
 
 PACKAGE_VERSION = 0.3
