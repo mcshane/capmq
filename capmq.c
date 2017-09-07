@@ -37,7 +37,7 @@ DEALINGS IN THE SOFTWARE.  */
 // Read Group / Capping Quality pair (for -g or -G options)
 typedef struct {
     char *rg;   // read group
-    int  capQ;  // map quality
+    uint8_t  capQ;  // map quality
 } rgv_t;
 
 // Array of RG/Value pairs (for -g or -G options)
@@ -98,11 +98,11 @@ static void rgva_push(rgva_t *rgva, rgv_t *rgv)
 // Global options
 typedef struct {
     bool verbose;
-    int capQ;
+    uint8_t capQ;
     bool storeQ;
     bool restoreQ;
     bool freemix;
-    int minQ;
+    uint8_t minQ;
     samFile *in;
     samFile *out;
     char *argv_list;
@@ -125,11 +125,78 @@ static void free_opts(opts_t *opts)
     }
 }
 
-// Convert freemix value to quality value
-static inline int f2q(double f)
+// Convert freemix value to quality value, or die trying
+static inline uint8_t f2q(double f)
 {
-    if (!f) return 0;
-    return (int) (10 * log10(1.0/f));
+    double qd;
+    if (f == 0) {
+      return 0;
+    } else if (f < 0) {
+      fprintf(stderr, "cannot interpret negative freemix value %f\n", f);
+    }
+    qd = -10.0 * log10(f);
+    if (qd < 0.0) {
+      return 0;
+    }
+    if (qd > 255.0) {
+      return 255;
+    }
+    return (uint8_t) qd;
+}
+
+/*
+ * Get uint8_t from string, or die trying
+ */
+static uint8_t uint8_from_str(char *str)
+{
+    uint8_t retval;
+    unsigned long int val;
+    errno = 0;
+    val = strtoul(str, NULL, 10);
+    if ((errno == ERANGE && (val == ULONG_MAX || val == 0)) 
+        || (errno != 0 && val == 0)) {
+        fprintf(stderr, "failed to parse string `%s' as unsigned long\n", str);
+        perror("strtoul");
+        exit(1);
+    }
+    if (val > 255) {
+        fprintf(stderr, "ERROR: value of string `%s' was out of range (must be between 0 and 255 inclusive)\n", str);
+        exit(1);
+    } else {
+        retval = (uint8_t)val;
+    }
+    return retval;
+}
+
+/*
+ * Get valid capq from string, or die trying
+ */
+static uint8_t capq_from_str(char *str, bool freemix)
+{
+    uint8_t capQ;
+
+    if (freemix) {
+      double val;
+      errno = 0;
+      val = strtod(str, NULL);
+      if (errno == ERANGE && (val == HUGE_VALF || val == HUGE_VALL)) {
+          fprintf(stderr, "overflow parsing freemix argument `%s' as double\n", str);
+          perror("strtod");
+          exit(1);
+      } else if (errno == ERANGE && val == 0) {
+          fprintf(stderr, "WARNING: underflow parsing freemix argument `%s' as double (will set capQ to 255)\n", str);
+          capQ = 255;
+      } else if (errno != 0 && val == 0) {
+          fprintf(stderr, "failed to parse freemix argument `%s' as double\n", str);
+          perror("strtod");
+          exit(1);
+      } else {
+          capQ = f2q(val);
+      }
+    } else {
+      capQ = uint8_from_str(str);
+    }
+    return capQ;
 }
 
 /*
@@ -147,8 +214,7 @@ static void parse_rgv(rgva_t *rgva, char *arg, bool freemix)
         rgv_t *rgv = calloc(1, sizeof(rgv_t));
         *s=0;
         rgv->rg = strdup(argstr);
-        if (freemix) rgv->capQ = f2q(atof(s+1));
-        else         rgv->capQ = atoi(s+1);
+        rgv->capQ = capq_from_str(s+1, freemix);
         rgva_push(rgva,rgv);
     }
     free(argstr);
@@ -255,7 +321,7 @@ static opts_t *parse_args(int argc, char **argv)
         case 'O': hts_parse_format(&out_fmt, optarg);
                   break;
 
-        case 'C': opts->capQ = opts->freemix ? f2q(atof(optarg)) : atoi(optarg);
+        case 'C': opts->capQ = capq_from_str(optarg, opts->freemix);
                   break;
 
         case 's': opts->storeQ = true;
@@ -279,7 +345,7 @@ static opts_t *parse_args(int argc, char **argv)
         case 'G': parse_gfile(optarg,opts);
                   break;
 
-        case 'm': opts->minQ = atoi(optarg);
+        case 'm': opts->minQ = uint8_from_str(optarg);
                   break;
 
         case 'h': usage(stdout);
@@ -382,7 +448,7 @@ int capq(opts_t *opts)
                     bam_aux_del(b, om);             // delete om tag
                 }
             } else {
-                int capQ = opts->capQ;
+                uint8_t capQ = opts->capQ;
                 rg = bam_aux_get(b, "RG");
                 if (rg) {
                     // handle -g / -G options
