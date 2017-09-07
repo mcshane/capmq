@@ -2,8 +2,9 @@
 
     Copyright (C) 2016-2017 Genome Research Ltd.
 
-    Author: Shane McCarthy <sm15@sanger.ac.uk>
-            Jennifer Liddle <js10@sanger.ac.uk>
+    Authors: Shane McCarthy <sm15@sanger.ac.uk>
+             Jennifer Liddle <js10@sanger.ac.uk>
+             Joshua C. Randall <jcrandall@alum.mit.edu>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
