@@ -13,7 +13,7 @@ INCLUDES=-I$(HTSDIR)/include -I$(HTSSRC) $(ZLIB_INCLUDES)
 LIBS=-L$(HTSDIR)/lib -L$(HTSDIR) -lhts -Wl,--rpath,$(HTSDIR)/lib -Wl,--rpath,$(HTSDIR) -lpthread $(ZLIB_LIBS) -lm -ldl
 CFLAGS=-O3 -g -Wall -Werror
 
-PACKAGE_VERSION = 0.3
+PACKAGE_VERSION = 0.5
 
 # If building from a Git repository, replace $(PACKAGE_VERSION) with the Git
 # description of the working tree: either a release tag with the same value
