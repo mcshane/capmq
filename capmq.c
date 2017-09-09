@@ -154,7 +154,7 @@ static uint8_t uint8_from_str(char *str)
     unsigned long int val;
     errno = 0;
     val = strtoul(str, NULL, 10);
-    if ((errno == ERANGE && (val == ULONG_MAX || val == 0)) 
+    if ((errno == ERANGE && (val == ULONG_MAX || val == 0))
         || (errno != 0 && val == 0)) {
         fprintf(stderr, "failed to parse string `%s' as unsigned long\n", str);
         perror("strtoul");
@@ -387,10 +387,10 @@ static opts_t *parse_args(int argc, char **argv)
     if (opts->freemix) {
       if (opts->capQ < opts->minQ) {
           if (opts->verbose) {
-              fprintf(stderr, 
+              fprintf(stderr,
                       "Default mapping quality cap calculated from freemix (%d) "
                       "was lower than the minimum specifed by `-m' (%d), using "
-                      "the latter as the default mapping quality cap.\n", 
+                      "the latter as the default mapping quality cap.\n",
                       opts->capQ, opts->minQ);
           }
           opts->capQ = opts->minQ;
@@ -401,7 +401,7 @@ static opts_t *parse_args(int argc, char **argv)
               rgv_t *rgv = opts->rgva->rgv[n];
               if (rgv->capQ < opts->minQ) {
                   if (opts->verbose) {
-                      fprintf(stderr, 
+                      fprintf(stderr,
                               "Mapping quality cap calculated from freemix (%d) "
                               "for read group `%s' was lower than the minimum "
                               "specifed by `-m' (%d), using the latter as the "
@@ -435,7 +435,7 @@ int capq(opts_t *opts)
         if (opts->rgva) {
             for (n=0; n < opts->rgva->end; n++) {
                 rgv_t *rgv = opts->rgva->rgv[n];
-                fprintf(stderr, "Capping mapping qualities to a maximum of %d for read group %s\n", rgv->capQ, rgv->rg); 
+                fprintf(stderr, "Capping mapping qualities to a maximum of %d for read group %s\n", rgv->capQ, rgv->rg);
             }
         }
     }
